@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import {User} from "../models/userModel.js";
 
 const isAuthenticated = async (req, res, next) => {
     try {
@@ -15,7 +16,15 @@ const isAuthenticated = async (req, res, next) => {
             });
         }
 
-        req._id = decode.userId;
+        const user = await User.findById(decode.userId)
+        if (!user){
+            return res.status(401).json({
+                message: 'Unauthorized',
+            })
+        }
+
+        req._id = user._id;
+        req.role = user.role;
         next();
     }
     catch (error) {

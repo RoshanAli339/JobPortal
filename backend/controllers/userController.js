@@ -14,7 +14,7 @@ export const register = async (req, res) => {
         }
 
         // checking if a user already exists using this email address
-        const user = await User.findOne({email});
+        const user = await User.findOne({email}).lean();
         if (user) {
             return error404(res, "User already exists with this email!")
         }
@@ -29,6 +29,7 @@ export const register = async (req, res) => {
             phoneNumber,
             password: hashedPassword,
             role,
+            profile: {}
         })
 
         return res.status(201).json({
@@ -49,7 +50,7 @@ export const login = async (req, res) => {
             return error404(res, "Something is missing")
         }
 
-        const user = await User.findOne({email});
+        const user = await User.findOne({email}).lean();
 
         if (!user) {
             return error404(res, "User doesnot exist with this email!")
@@ -103,19 +104,29 @@ export const logout = async (req, res) => {
 export const updateProfile = async (req, res) => {
     try {
         const userId = req._id;
+        let user = await User.findById(userId);
+        if (!user) {
+            return error404(res, "User not found!");
+        }
         // changes can be made to required fields only
         const updateData = Object.keys(req.body).reduce((acc, key) => {
-            acc[key] = req.body[key]
-            if (key === "profile" && acc[key]['skills'] !== undefined && acc[key]['skills'] !== null) {
-                acc[key]['skills'] = acc[key]['skills'].split(",")
+            if (key === "profile") {
+                acc[key] = {
+                    ...user.profile,
+                    ...req.body[key]
+                }
+                if (acc[key]['skills'])
+                    acc[key]['skills'] = acc[key]['skills'].split(",")
             }
+            else
+                acc[key] = req.body[key]
             return acc
         }, {})
 
-        const user = await User.findByIdAndUpdate(userId, updateData, {new: true})
+        user = await User.findByIdAndUpdate(userId, updateData, {new: true})
 
         if (!user) {
-            return error404(res, "User not found!")
+            return error404(res, "Update not successful!")
         }
 
         // TO-DO: implement resume upload using cloudinary

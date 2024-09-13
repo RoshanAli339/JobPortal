@@ -9,7 +9,7 @@ export const registerCompany = async (req, res) => {
             return error404(res, "Company name is required")
         }
 
-        let company = await Company.findOne({name: companyName})
+        let company = await Company.findOne({name: companyName}).lean()
 
         if (company) {
             return error404(res, "Company already exists with this name")
@@ -34,7 +34,7 @@ export const registerCompany = async (req, res) => {
 export const getCompany = async (req, res) => {
     try {
         const userId = req._id; // logged in user id
-        const companies = await Company.find({userId})
+        const companies = await Company.find({userId}).lean()
         if (!companies) {
             return error404(res, "Companies not found!")
         }
@@ -54,7 +54,7 @@ export const getCompany = async (req, res) => {
 export const getCompanyById = async (req, res) => {
     try {
         const companyId = req.params.id
-        console.log("Company ID: ", companyId)
+        const company = await Company.findById(companyId).lean()
 
         if (!company) {
             return error404(res, "Company not found!")

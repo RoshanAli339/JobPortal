@@ -4,6 +4,8 @@ import cors from "cors";
 import connectDB from "./utils/db.js";
 import userRoutes from "./routes/userRoutes.js";
 import companyRoutes from "./routes/companyRoutes.js";
+import jobRoutes from "./routes/jobRoutes.js";
+import applicationRoutes from "./routes/applicationRoutes.js";
 
 const app = express();
 
@@ -23,6 +25,8 @@ app.use(cors(corsOptions));
 
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/company', companyRoutes);
+app.use('/api/v1/jobs', jobRoutes);
+app.use('/api/v1/applications/', applicationRoutes)
 
 app.get("/test", (req, res) => {
     return res.status(200).json({
