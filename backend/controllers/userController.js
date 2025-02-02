@@ -1,26 +1,27 @@
-import {User} from "../models/userModel.js";
-import bcrypt from 'bcryptjs';
-import Jwt from "jsonwebtoken";
-import error404 from "../utils/400.js";
+import { User } from '../models/userModel.js'
+import bcrypt from 'bcryptjs'
+import Jwt from 'jsonwebtoken'
+import error404 from '../utils/400.js'
 
 // Registration business logic
 export const register = async (req, res) => {
     try {
-        const {fullName, email, phoneNumber, password, role} = req.body;
+        const { fullName, email, phoneNumber, password, role } = req.body
 
         // if any of the required fields is missing
         if (!fullName || !email || !phoneNumber || !password) {
-            return error404(res, "Something is missing")
+            return error404(res, 'Something is missing')
         }
+        const avatar = req.file
 
         // checking if a user already exists using this email address
-        const user = await User.findOne({email}).lean();
+        const user = await User.findOne({ email }).lean()
         if (user) {
-            return error404(res, "User already exists with this email!")
+            return error404(res, 'User already exists with this email!')
         }
 
         // hashing the password
-        const hashedPassword = await bcrypt.hash(password, 12);
+        const hashedPassword = await bcrypt.hash(password, 12)
 
         // creating user
         await User.create({
@@ -29,116 +30,118 @@ export const register = async (req, res) => {
             phoneNumber,
             password: hashedPassword,
             role,
-            profile: {}
+            profile: {},
         })
 
         return res.status(201).json({
-            message: "User successfully created!",
+            message: 'User successfully created!',
             registrationSuccess: true,
         })
     } catch (error) {
         console.log(error)
-        return error404(res, "Something went wrong!")
+        return error404(res, 'Something went wrong!')
     }
 }
 
 // Login business logic
 export const login = async (req, res) => {
     try {
-        const {email, password, role} = req.body;
+        const { email, password, role } = req.body
         if (!email || !password || !role) {
-            return error404(res, "Something is missing")
+            return error404(res, 'Something is missing')
         }
 
-        const user = await User.findOne({email}).lean();
+        const user = await User.findOne({ email }).lean()
 
         if (!user) {
-            return error404(res, "User doesnot exist with this email!")
+            return error404(res, 'User doesnot exist with this email!')
         }
 
-        const isPasswordMatch = await bcrypt.compare(password, user.password);
+        const isPasswordMatch = await bcrypt.compare(password, user.password)
 
         if (!isPasswordMatch) {
-            return error404(res, "Incorrect username or password!")
+            return error404(res, 'Incorrect username or password!')
         }
 
         if (role !== user.role) {
-            return error404(res, "Incorrect role!")
+            return error404(res, 'Incorrect role!')
         }
 
         const tokenData = {
             userId: user._id,
         }
 
-        const jwt = await Jwt.sign(tokenData, process.env.SECRET_KEY, {expiresIn: '12h'});
-
-        return res.status(200).cookie("token", jwt, {
-            maxAge: 12 * 60 * 60 * 1000,
-            httpOnly: true,
-            sameSite: 'strict'
-        }).json({
-            message: `Welcome back, ${user.fullName}`,
-            userId: user._id,
-            loginSuccess: true,
+        const jwt = await Jwt.sign(tokenData, process.env.SECRET_KEY, {
+            expiresIn: '12h',
         })
+
+        return res
+            .status(200)
+            .cookie('token', jwt, {
+                maxAge: 12 * 60 * 60 * 1000,
+                httpOnly: true,
+                sameSite: 'strict',
+            })
+            .json({
+                message: `Welcome back, ${user.fullName}`,
+                userId: user._id,
+                loginSuccess: true,
+            })
     } catch (error) {
         console.log(error)
-        return error404(res, "Something went wrong!")
+        return error404(res, 'Something went wrong!')
     }
 }
 
 // Logout business logic
 export const logout = async (req, res) => {
     try {
-        return res.status(200).cookie("token", "", {maxAge: 0}).json({
-            message: "Logged out",
+        return res.status(200).cookie('token', '', { maxAge: 0 }).json({
+            message: 'Logged out',
             logoutSuccess: true,
         })
     } catch (error) {
-        console.log(error);
-        return error404(res, "Something went wrong!")
+        console.log(error)
+        return error404(res, 'Something went wrong!')
     }
 }
 
 // Update profile business logic
 export const updateProfile = async (req, res) => {
     try {
-        const userId = req._id;
-        let user = await User.findById(userId);
+        const userId = req._id
+        let user = await User.findById(userId)
         if (!user) {
-            return error404(res, "User not found!");
+            return error404(res, 'User not found!')
         }
         // changes can be made to required fields only
         const updateData = Object.keys(req.body).reduce((acc, key) => {
-            if (key === "profile") {
+            if (key === 'profile') {
                 acc[key] = {
                     ...user.profile,
-                    ...req.body[key]
+                    ...req.body[key],
                 }
                 if (acc[key]['skills'])
-                    acc[key]['skills'] = acc[key]['skills'].split(",")
-            }
-            else
-                acc[key] = req.body[key]
+                    acc[key]['skills'] = acc[key]['skills'].split(',')
+            } else acc[key] = req.body[key]
             return acc
         }, {})
 
-        user = await User.findByIdAndUpdate(userId, updateData, {new: true})
+        user = await User.findByIdAndUpdate(userId, updateData, { new: true })
 
         if (!user) {
-            return error404(res, "Update not successful!")
+            return error404(res, 'Update not successful!')
         }
 
         // TO-DO: implement resume upload using cloudinary
 
         return res.status(200).json({
-            message: "User successfully updated",
+            message: 'User successfully updated',
             userId: user._id,
             updateSuccess: true,
         })
-
     } catch (e) {
         console.log(e)
-        return error404(res, "Something went wrong!")
+        return error404(res, 'Something went wrong!')
     }
 }
